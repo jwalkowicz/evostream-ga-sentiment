@@ -1,0 +1,79 @@
+# to do this file:
+# this is just an example and placeholder
+
+
+services:
+  # Core
+  redis:
+    image: redis:alpine
+    container_name: redis-state
+    ports:
+      - "6379:6379"
+    networks:
+      - evostream-net
+
+  kafka-broker-1:
+    image: apache/kafka:latest
+    # ... your previous broker config ...
+    networks:
+      - evostream-net
+  
+  # Python services
+  ingester:
+    build: .
+    container_name: app-ingester
+    command: uv run python -m src.apps.1_ingester
+    env_file:
+      - .env
+    volumes:
+      - ./src:/app/src  # Live code reloading
+      - ./data:/app/data # Access to your test CSVs
+    depends_on:
+      - kafka-broker-1
+    networks:
+      - evostream-net
+
+  processor:
+    build: .
+    container_name: app-processor
+    command: uv run python -m src.apps.2_processor
+    env_file:
+      - .env
+    volumes:
+      - ./src:/app/src
+    depends_on:
+      - kafka-broker-1
+    networks:
+      - evostream-net
+
+  clusterer:
+    build: .
+    container_name: app-clusterer
+    command: uv run python -m src.apps.3_clusterer
+    env_file:
+      - .env
+    volumes:
+      - ./src:/app/src
+    depends_on:
+      - kafka-broker-1
+      - redis
+    networks:
+      - evostream-net
+
+  ga-optimizer:
+    build: .
+    container_name: app-ga-optimizer
+    command: uv run python -m src.apps.4_ga_optimizer
+    env_file:
+      - .env
+    volumes:
+      - ./src:/app/src
+    depends_on:
+      - kafka-broker-1
+      - redis
+    networks:
+      - evostream-net
+
+networks:
+  evostream-net:
+    driver: bridge

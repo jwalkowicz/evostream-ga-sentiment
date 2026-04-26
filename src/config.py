@@ -12,7 +12,8 @@ class Settings(BaseSettings):
     dataset_file_path: str
     dataset_chunk_size: int = 1000
     dataset_text_column: str = "text"
-
+    
+    @property
     def dataset_params(self) -> dict:
         return {
             "filepath_or_buffer": self.dataset_file_path,
