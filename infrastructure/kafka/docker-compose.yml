@@ -1,6 +1,6 @@
 services:
   kafka-broker-1:
-    image: apache/kafka:latest
+    image: apache/kafka:3.7.0
     container_name: kafka-broker-1
     environment:
       KAFKA_NODE_ID: 1
@@ -18,7 +18,7 @@ services:
       - kafka-network
 
   kafka-broker-2:
-    image: apache/kafka:latest
+    image: apache/kafka:3.7.0
     container_name: kafka-broker-2
     environment:
       KAFKA_NODE_ID: 2
@@ -36,7 +36,7 @@ services:
       - kafka-network
 
   kafka-broker-3:
-    image: apache/kafka:latest
+    image: apache/kafka:3.7.0
     container_name: kafka-broker-3
     environment:
       KAFKA_NODE_ID: 3
@@ -54,7 +54,7 @@ services:
       - kafka-network
 
   kafka-ui:
-    image: provectuslabs/kafka-ui:latest
+    image: provectuslabs/kafka-ui:3.7.0
     container_name: kafka-ui
     environment:
       KAFKA_CLUSTERS_0_NAME: local-cluster
