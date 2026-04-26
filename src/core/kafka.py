@@ -2,7 +2,7 @@ import json
 
 from confluent_kafka import Producer
 
-from logger import logger
+from src.logger import logger
 
 
 class StreamProducer:

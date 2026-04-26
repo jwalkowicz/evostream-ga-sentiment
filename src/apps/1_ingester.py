@@ -1,10 +1,11 @@
-from logger import logger
-from core.kafka import StreamProducer
-from config import config
-import pandas as pd
-import time
 import signal
+import time
 
+import pandas as pd
+
+from src.config import config
+from src.core.kafka import StreamProducer
+from src.logger import logger
 
 running = True
 
