@@ -1,5 +1,5 @@
 def main():
-    print("Hello from zaawansowana-sztuczna-int!")
+    print("Hello from evostream-ga-sentiment!")
 
 
 if __name__ == "__main__":

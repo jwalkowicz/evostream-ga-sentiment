@@ -28,3 +28,6 @@ def create_initial_topics():
             logger.success(f"Topic '{topic}' has been successfully created.")
         except Exception as e:
             logger.error(f"Failed to create topic '{topic}': {e}")
+            
+if __name__ == "__main__":
+    create_initial_topics()
