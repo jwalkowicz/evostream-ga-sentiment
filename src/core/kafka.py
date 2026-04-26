@@ -1,6 +1,6 @@
 import json
 
-from confluent_kafka import Producer
+from confluent_kafka import Consumer, Producer
 
 from src.logger import logger
 
@@ -31,3 +31,29 @@ class StreamProducer:
         logger.info("Flushing remaining messages...")
         self.producer.flush()
         logger.info("Producer successfully closed.")
+
+
+class StreamConsumer:
+    def __init__(self, bootstrap_servers: str, group_id: str, topics: list):
+        self.consumer = Consumer(
+            {
+                "bootstrap.servers": bootstrap_servers,
+                "group.id": group_id,
+                "auto.offset.reset": "earliest",
+                "enable.auto.commit": False,
+            }
+        )
+        self.consumer.subscribe(topics)
+
+    def consume(self, batch_size: int, timeout: float):
+        """Consumes a batch of messages."""
+        return self.consumer.consume(batch_size, timeout=timeout)
+
+    def commit(self):
+        """Manually commits the current offsets."""
+        self.consumer.commit(asynchronous=True)
+
+    def close(self):
+        """Closes the consumer connection."""
+        self.consumer.close()
+        logger.info("Consumer successfully closed.")
