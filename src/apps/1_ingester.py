@@ -8,6 +8,7 @@ import signal
 
 running = True
 
+
 def handle_shutdown(sig, frame):
     global running
     logger.warning("Shutdown signal received. Finishing current batch...")
@@ -17,17 +18,17 @@ def handle_shutdown(sig, frame):
 def run_ingester():
     signal.signal(signal.SIGINT, handle_shutdown)
     signal.signal(signal.SIGTERM, handle_shutdown)
-    
+
     producer = StreamProducer(bootstrap_servers=config.kafka_bootstrap_servers)
 
     try:
         for chunk in pd.read_csv(**config.dataset_params):
             if not running:
                 break
-            
+
             for _, row in chunk.iterrows():
                 producer.send(topic=config.msg_topic, value=row.to_dict())
-            
+
             logger.info(f"Sent batch of {len(chunk)} messages to '{config.msg_topic}'.")
             time.sleep(1)
 
@@ -36,10 +37,7 @@ def run_ingester():
 
     finally:
         producer.close()
-        
-        
-        
-        
+
 
 if __name__ == "__main__":
     logger.info("Starting Ingester App...")

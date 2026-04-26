@@ -3,13 +3,12 @@ from config import config
 from logger import logger
 import json
 
+
 class StreamProducer:
     def __init__(self, bootstrap_servers: str):
-        self.producer = Producer({
-            "bootstrap.servers": bootstrap_servers
-        })
+        self.producer = Producer({"bootstrap.servers": bootstrap_servers})
         logger.info(f"Kafka Producer initialized at {bootstrap_servers}")
-    
+
     def _acked(self, err, msg):
         """Internal callback for delivery reports."""
         if err is not None:
@@ -19,13 +18,13 @@ class StreamProducer:
                 f"Delivered to '{msg.topic()}' "
                 f"[Partition: {msg.partition()} | Offset: {msg.offset()}]"
             )
-    
+
     def send(self, topic: str, value: str):
         """Serializes dict to JSON, encodes to UTF-8, and produces."""
-        value_encoded = json.dumps(value).encode('utf-8')
+        value_encoded = json.dumps(value).encode("utf-8")
         self.producer.produce(topic, value=value_encoded, callback=self._acked)
         self.producer.poll(0)
-    
+
     def close(self):
         """Ensures all messages are sent before shutting down."""
         logger.info("Flushing remaining messages...")
