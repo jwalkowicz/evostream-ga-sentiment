@@ -1,23 +1,24 @@
 from src.logger import logger
+from src.config import config
 from confluent_kafka.admin import AdminClient, NewTopic
-
-EMBEDDINGS = "embeddings"
-MSG_TOPIC = "messages"
-EMBEDDINGS_TOPIC = "embeddings"
-PARTITIONS_NUM = 3
-REPLICATION_FACTOR_NUM = 3
-BOOTSTRAP_SERVER = "localhost:9094, localhost:9095, localhost:9096"
-INIT_CLIENT_CONFIG = {
-    "bootstrap.servers": BOOTSTRAP_SERVER
-}
 
 def create_initial_topics():
     logger.info("Initializing Kafka Admin Client...")
-    admin = AdminClient(INIT_CLIENT_CONFIG)
+    admin = AdminClient({
+        "bootstrap.servers": config.kafka_bootstrap_servers
+    })
 
     topics = [
-        NewTopic(topic=MSG_TOPIC, num_partitions=PARTITIONS_NUM, replication_factor=REPLICATION_FACTOR_NUM),
-        NewTopic(topic=EMBEDDINGS_TOPIC, num_partitions=PARTITIONS_NUM, replication_factor=REPLICATION_FACTOR_NUM),
+        NewTopic(
+            topic=config.msg_topic, 
+            num_partitions=config.kafka_partitions_num, 
+            replication_factor=config.kafka_replication_factor
+        ),
+        NewTopic(
+            topic=config.embeddings_topic, 
+            num_partitions=config.kafka_partitions_num, 
+            replication_factor=config.kafka_replication_factor
+        ),
     ]
 
     futures = admin.create_topics(topics)
