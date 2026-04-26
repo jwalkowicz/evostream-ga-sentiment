@@ -8,8 +8,8 @@ from confluent_kafka import KafkaError
 from sentence_transformers import SentenceTransformer
 from sklearn.decomposition import IncrementalPCA
 
-from core.kafka import StreamConsumer, StreamProducer
 from src.config import config
+from src.core.kafka import StreamConsumer, StreamProducer
 from src.logger import logger
 
 running = True
