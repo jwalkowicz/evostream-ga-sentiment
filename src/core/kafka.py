@@ -20,7 +20,7 @@ class StreamProducer:
                 f"[Partition: {msg.partition()} | Offset: {msg.offset()}]"
             )
 
-    def send(self, topic: str, value: str):
+    def send(self, topic: str, value: dict):
         """Serializes dict to JSON, encodes to UTF-8, and produces."""
         value_encoded = json.dumps(value).encode("utf-8")
         self.producer.produce(topic, value=value_encoded, callback=self._acked)

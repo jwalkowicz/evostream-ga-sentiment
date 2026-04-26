@@ -37,34 +37,49 @@ class PreprocessorApp:
         signal.signal(signal.SIGTERM, self.handle_shutdown)
 
         logger.info("Preprocessor started...")
+        try:
+            while running:
+                kafka_batch = self.consumer.consume(
+                    batch_size=config.topic_batch_size, timeout=config.topic_timeout
+                )
 
-        while running:
-            kafka_batch = self.consumer.consume(
-                batch_size=config.topic_batch_size, timeout=config.topic_timeout
-            )
+                if not kafka_batch:
+                    continue
 
-            if not kafka_batch:
-                continue
+                try:
+                    cleaned_texts, metadata = self._prepare_batch(kafka_batch)
+                    if not cleaned_texts:
+                        continue
+                except Exception as e:
+                    logger.error(f"Batch preparation failed: {e}")
+                    continue
 
-            cleaned_texts, metadata = self._prepare_batch(kafka_batch)
-
-            if not cleaned_texts:
-                continue
-
-            embeddings = self.encoder.encode(cleaned_texts, show_progress_bar=False)
-            try:
-                if len(embeddings) >= self.pca.n_components_:
-                    self.pca.partial_fit(embeddings)
-                    reduced_vectors = self.pca.transform(embeddings)
-
-                    self._emit_results(reduced_vectors, metadata)
-                    logger.info(f"Processed and emitted batch of {len(cleaned_texts)}")
-                else:
-                    logger.warning(
-                        f"Batch too small ({len(embeddings)}) for PCA update."
+                try:
+                    embeddings = self.encoder.encode(
+                        cleaned_texts, show_progress_bar=False
                     )
-            except Exception as e:
-                logger.error(f"Mathematical transformation failed: {e}")
+
+                    if len(embeddings) >= self.pca.n_components:
+                        self.pca.partial_fit(embeddings)
+                        reduced_vectors = self.pca.transform(embeddings)
+
+                        self._emit_results(reduced_vectors, metadata)
+                        self.consumer.commit()
+                        logger.info(f"Committed batch of {len(cleaned_texts)}")
+                        logger.info(
+                            f"Processed and emitted batch of {len(cleaned_texts)}"
+                        )
+                    else:
+                        logger.warning(
+                            f"Batch too small ({len(embeddings)}) for PCA update."
+                        )
+                except Exception as e:
+                    logger.error(f"Mathematical transformation failed: {e}")
+
+        finally:
+            # FIX: Ensure clean shutdown
+            self.consumer.close()
+            self.producer.close()
 
     def _prepare_batch(self, kafka_batch):
         """Extracts JSON, handles Kafka errors, and cleans text."""
@@ -74,11 +89,11 @@ class PreprocessorApp:
             err = event.error()
             if err:
                 if err.code() == KafkaError._PARTITION_EOF:
-                    print(
+                    logger.warning(
                         f"Reached end of the partition: {event.topic()} [{event.partition()}]"
                     )
                 else:
-                    print(f"Consumer error: {err}")
+                    logger.error(f"Consumer error: {err}")
                 continue
             try:
                 data = json.loads(event.value().decode("utf-8"))
@@ -104,7 +119,9 @@ class PreprocessorApp:
 
     def _emit_results(self, vectors, metadata):
         """Sends processed embeddings to Kafka."""
-        pass
+        for i, vector in enumerate(vectors):
+            result = {**metadata[i], "embedding": vector.tolist()}
+            self.producer.send(config.embeddings_topic, result)
 
 
 if __name__ == "__main__":
