@@ -1,7 +1,8 @@
-from confluent_kafka import Producer
-from config import config
-from logger import logger
 import json
+
+from confluent_kafka import Producer
+
+from logger import logger
 
 
 class StreamProducer:
