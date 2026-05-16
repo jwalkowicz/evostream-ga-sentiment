@@ -1,0 +1,24 @@
+kafka:
+  bootstrap_servers: "localhost:9092"
+  partitions_num: 3
+  replication_factor: 3
+  topics:
+    msg_topic: "messages"
+    embeddings_topic: "embeddings"
+  event:
+    text_column: "text"
+    vector_column: "embedding"
+
+dataset:
+  file_path: "data/gdelt_test.csv"
+  chunk_size: 1000
+  text_column: "text"
+
+ml:
+  embedding_model: "all-MiniLM-L6-v2"
+  pca_components_num: 50
+
+denstream:
+    epsilon: 0.3
+    mu: 2
+    decaying_factor: 0.01

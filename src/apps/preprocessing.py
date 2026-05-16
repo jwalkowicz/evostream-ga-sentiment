@@ -16,23 +16,27 @@ running = True
 
 
 class PreprocessorApp:
+    """Consumes raw messages, transforms text into embeddings, and applies PCA."""
+
     def __init__(self):
+        """Initializes Kafka components and ML models."""
         self.consumer = StreamConsumer(
-            bootstrap_servers=config.kafka_bootstrap_servers,
+            bootstrap_servers=config.kafka.bootstrap_servers,
             group_id="preprocessor-group",
-            topics=[config.msg_topic],
+            topics=[config.kafka.topics.msg],
         )
-        self.producer = StreamProducer(config.kafka_bootstrap_servers)
-        self.encoder = SentenceTransformer(config.embedding_model)
-        self.pca = IncrementalPCA(n_components=config.pca_components_num)
+        self.producer = StreamProducer(config.kafka.bootstrap_servers)
+        self.encoder = SentenceTransformer(config.ml.embedding_model)
+        self.pca = IncrementalPCA(n_components=config.ml.pca_components_num)
 
     def handle_shutdown(self, sig, frame):
+        """Signals the app to stop processing after the current batch."""
         global running
         logger.warning("Shutdown signal received. Finishing current batch...")
         running = False
 
     def run_preprocessor(self):
-        """Orchestrates the high-level streaming loop."""
+        """Main loop that consumes, transforms, and emits processed data."""
         signal.signal(signal.SIGINT, self.handle_shutdown)
         signal.signal(signal.SIGTERM, self.handle_shutdown)
 
@@ -40,7 +44,7 @@ class PreprocessorApp:
         try:
             while running:
                 kafka_batch = self.consumer.consume(
-                    batch_size=config.topic_batch_size, timeout=config.topic_timeout
+                    batch_size=config.kafka.batch_size, timeout=config.kafka.timeout
                 )
 
                 if not kafka_batch:
@@ -82,7 +86,7 @@ class PreprocessorApp:
             self.producer.close()
 
     def _prepare_batch(self, kafka_batch):
-        """Extracts JSON, handles Kafka errors, and cleans text."""
+        """Parses Kafka events and cleans text content."""
         cleaned_texts = []
         metadata = []
         for event in kafka_batch:
@@ -97,7 +101,7 @@ class PreprocessorApp:
                 continue
             try:
                 data = json.loads(event.value().decode("utf-8"))
-                text = data.get(config.dataset_text_column, "")
+                text = data.get(config.dataset.text_column, "")
                 cleaned_texts.append(self._preprocess(text))
                 metadata.append(data)
             except Exception as e:
@@ -105,7 +109,7 @@ class PreprocessorApp:
         return cleaned_texts, metadata
 
     def _preprocess(self, text: str) -> str:
-        """Cleans and normalizes text."""
+        """Cleans text by removing HTML, URLs, and punctuation."""
         if not text:
             return ""
         text = text.lower()
@@ -118,10 +122,10 @@ class PreprocessorApp:
         return text
 
     def _emit_results(self, vectors, metadata):
-        """Sends processed embeddings to Kafka."""
+        """Produces processed embeddings back to Kafka."""
         for i, vector in enumerate(vectors):
             result = {**metadata[i], "embedding": vector.tolist()}
-            self.producer.send(config.embeddings_topic, result)
+            self.producer.send(config.kafka.topics.embeddings, result)
 
 
 if __name__ == "__main__":

@@ -1,42 +1,56 @@
-# to do this file:
-# this is just an example and placeholder
-
-
 services:
-  # Core
-  redis:
-    image: redis:alpine
-    container_name: redis-state
+kafka-broker-1:
+    image: apache/kafka:latest
+    container_name: kafka-broker-1
     ports:
-      - "6379:6379"
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,EXTERNAL://0.0.0.0:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-broker-1:9092,EXTERNAL://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-broker-1:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
     networks:
       - evostream-net
 
-  kafka-broker-1:
-    image: apache/kafka:latest
-    # ... your previous broker config ...
-    networks:
-      - evostream-net
+kafka-ui:
+  image: provectuslabs/kafka-ui:latest
+  container_name: kafka-ui
+  ports:
+    - "8080:8080"
+  environment:
+    KAFKA_CLUSTERS_0_NAME: local_kraft
+    KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka-broker-1:9092
+  depends_on:
+    - kafka-broker-1
+  networks:
+    - evostream-net
   
   # Python services
   ingester:
     build: .
     container_name: app-ingester
-    command: uv run python -m src.apps.1_ingester
+    command: uv run python -m src.apps.ingesting
     env_file:
       - .env
     volumes:
-      - ./src:/app/src  # Live code reloading
-      - ./data:/app/data # Access to your test CSVs
+      - ./src:/app/src 
+      - ./data:/app/data 
     depends_on:
       - kafka-broker-1
     networks:
       - evostream-net
 
-  processor:
+  preprocessor:
     build: .
-    container_name: app-processor
-    command: uv run python -m src.apps.2_processor
+    container_name: app-preprocessor
+    command: uv run python -m src.apps.preprocessing
     env_file:
       - .env
     volumes:
@@ -49,28 +63,13 @@ services:
   clusterer:
     build: .
     container_name: app-clusterer
-    command: uv run python -m src.apps.3_clusterer
+    command: uv run python -m src.apps.clustering
     env_file:
       - .env
     volumes:
       - ./src:/app/src
     depends_on:
       - kafka-broker-1
-      - redis
-    networks:
-      - evostream-net
-
-  ga-optimizer:
-    build: .
-    container_name: app-ga-optimizer
-    command: uv run python -m src.apps.4_ga_optimizer
-    env_file:
-      - .env
-    volumes:
-      - ./src:/app/src
-    depends_on:
-      - kafka-broker-1
-      - redis
     networks:
       - evostream-net
 

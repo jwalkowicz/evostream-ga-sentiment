@@ -17,6 +17,7 @@ def handle_shutdown(sig, frame):
 
 
 def run_ingester():
+    """Reads dataset chunks and produces messages to a Kafka topic."""
     signal.signal(signal.SIGINT, handle_shutdown)
     signal.signal(signal.SIGTERM, handle_shutdown)
 
