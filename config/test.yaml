@@ -10,7 +10,7 @@ kafka:
     vector_column: "embedding"
 
 dataset:
-  file_path: "data/gdelt_test.csv"
+  file_path: "test/data/twitter_dataset_1000.csv"
   chunk_size: 1000
   text_column: "text"
 

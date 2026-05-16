@@ -50,7 +50,7 @@ class Settings(BaseSettings):
     denstream: DenStreamSettings
 
     @classmethod
-    def load_from_yaml(cls, yaml_path: str = "config/config.yaml") -> "Settings":
+    def load_from_yaml(cls, yaml_path: str = "config/test.yaml") -> "Settings":
         """Loads and parses the configurations directly from a YAML file."""
         with open(yaml_path, "r") as f:
             raw_config = yaml.safe_load(f)
@@ -66,6 +66,7 @@ class Settings(BaseSettings):
             "chunksize": self.dataset.chunk_size,
         }
 
+    @property
     def denstream_params(self) -> dict:
         return self.denstream.model_dump()
 

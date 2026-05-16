@@ -1,18 +1,17 @@
-# to do this file:
-# this is just an example and placeholder
-
 FROM python:3.12-slim
 
-# Install uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    cargo \
+    rustc \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Copy dependency files first for caching
 COPY pyproject.toml uv.lock ./
 
-# Install dependencies into the system environment (no virtual env needed inside Docker)
-RUN uv sync --system
+RUN uv sync --frozen --no-install-project
 
-# Copy the rest of the application
 COPY . .

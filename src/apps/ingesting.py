@@ -4,7 +4,7 @@ import time
 import pandas as pd
 
 from src.config import config
-from src.core.kafka import StreamProducer
+from src.infrastructure.kafka import StreamProducer
 from src.logger import logger
 
 running = True
