@@ -3,9 +3,9 @@ import time
 
 import pandas as pd
 
-from src.config import config
-from src.infrastructure.kafka import StreamProducer
-from src.logger import logger
+from src.core.config import config
+from src.infra.kafka import StreamProducer
+from src.core.logger import logger
 
 running = True
 
@@ -21,7 +21,7 @@ def run_ingester():
     signal.signal(signal.SIGINT, handle_shutdown)
     signal.signal(signal.SIGTERM, handle_shutdown)
 
-    producer = StreamProducer(bootstrap_servers=config.kafka_bootstrap_servers)
+    producer = StreamProducer(bootstrap_servers=config.kafka.bootstrap_servers)
 
     try:
         for chunk in pd.read_csv(**config.dataset_params):
@@ -29,9 +29,9 @@ def run_ingester():
                 break
 
             for _, row in chunk.iterrows():
-                producer.send(topic=config.msg_topic, value=row.to_dict())
+                producer.send(topic=config.kafka.topics.msg, value=row.to_dict())
 
-            logger.info(f"Sent batch of {len(chunk)} messages to '{config.msg_topic}'.")
+            logger.info(f"Sent batch of {len(chunk)} messages to '{config.kafka.topics.msg}'.")
             time.sleep(1)
 
     except Exception as e:

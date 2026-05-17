@@ -12,10 +12,15 @@ class KafkaEventSchema(BaseModel):
     text_column: str = "text"
     vector_column: str = "embedding"
 
+class KafkaConsumers(BaseModel):
+    preprocessor_group: str
+    clusterer_group: str
+
 
 class KafkaSettings(BaseModel):
     topics: KafkaTopics
     event: KafkaEventSchema
+    consumers: KafkaConsumers
 
     bootstrap_servers: str
     partitions_num: int = 3
@@ -69,6 +74,5 @@ class Settings(BaseSettings):
     @property
     def denstream_params(self) -> dict:
         return self.denstream.model_dump()
-
 
 config = Settings.load_from_yaml()

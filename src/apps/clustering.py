@@ -9,18 +9,18 @@ import signal
 from confluent_kafka import KafkaError
 from river import cluster, stream
 
-from src.config import config
-from src.core.kafka import StreamConsumer
-from src.logger import logger
+from src.core.config import config
+from src.infra.kafka import StreamConsumer
+from src.core.logger import logger
 
 running = True
-
+WINDOW_SIZE = 50000
 
 class StreamClusterer:
     def __init__(self, model):
         self.consumer = StreamConsumer(
             bootstrap_servers=config.kafka.bootstrap_servers,
-            group_id="preprocessor-group",
+            group_id=config.kafka.consumers.clusterer_group,
             topics=[config.kafka.topics.embeddings],
         )
         self.model = model
@@ -78,7 +78,7 @@ class StreamClusterer:
                     logger.error(f"Consumer error: {err}")
                 continue
             try:
-                data = json.loads(event.value().decode("utf-8"))
+                data = json.loads(event.value())
                 text = data.get(config.dataset.text_column, "")
                 embeddings.append(text)
                 metadata.append(data)

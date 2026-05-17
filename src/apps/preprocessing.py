@@ -8,9 +8,9 @@ from confluent_kafka import KafkaError
 from sentence_transformers import SentenceTransformer
 from sklearn.decomposition import IncrementalPCA
 
-from src.config import config
-from src.core.kafka import StreamConsumer, StreamProducer
-from src.logger import logger
+from src.core.config import config
+from src.infra.kafka import StreamConsumer, StreamProducer
+from src.core.logger import logger
 
 running = True
 
@@ -22,7 +22,7 @@ class PreprocessorApp:
         """Initializes Kafka components and ML models."""
         self.consumer = StreamConsumer(
             bootstrap_servers=config.kafka.bootstrap_servers,
-            group_id="preprocessor-group",
+            group_id=config.kafka.consumers.preprocessor_group,
             topics=[config.kafka.topics.msg],
         )
         self.producer = StreamProducer(config.kafka.bootstrap_servers)
