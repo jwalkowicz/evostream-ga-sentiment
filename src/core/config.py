@@ -3,8 +3,8 @@ from pydantic import BaseModel
 from pydantic_settings import BaseSettings
 
 
-class KafkaTopics(BaseModel):
-    msg: str = "messages"
+class KafkaTopic(BaseModel):
+    raw_messages: str = "raw_messages"
     embeddings: str = "embeddings"
 
 
@@ -12,18 +12,19 @@ class KafkaEventSchema(BaseModel):
     text_column: str = "text"
     vector_column: str = "embedding"
 
-class KafkaConsumers(BaseModel):
+
+class KafkaConsumer(BaseModel):
     preprocessor_group: str
     clusterer_group: str
 
 
 class KafkaSettings(BaseModel):
-    topics: KafkaTopics
+    topic: KafkaTopic
     event: KafkaEventSchema
-    consumers: KafkaConsumers
+    consumers: KafkaConsumer
 
     bootstrap_servers: str
-    partitions_num: int = 3
+    num_partitions: int = 3
     replication_factor: int = 3
     timeout: float = 1.0
     batch_size: int = 64
@@ -45,8 +46,10 @@ class DenStreamSettings(BaseModel):
     mu: int = 2
     decaying_factor: float = 0.01
 
+
 class GeneticAlgorithmSettings(BaseModel):
     pass
+
 
 class Settings(BaseSettings):
     kafka: KafkaSettings
@@ -74,5 +77,6 @@ class Settings(BaseSettings):
     @property
     def denstream_params(self) -> dict:
         return self.denstream.model_dump()
+
 
 config = Settings.load_from_yaml()

@@ -1,9 +1,9 @@
 kafka:
-  bootstrap_servers: "localhost:29092"
-  partitions_num: 3
+  bootstrap_servers: "kafka-broker-1:9092"
+  num_partitions: 3
   replication_factor: 1
-  topics:
-    msg: "messages"
+  topic:
+    raw_message: "raw_messages"
     embeddings: "embeddings"
   event:
     text_column: "text"
@@ -11,7 +11,6 @@ kafka:
   consumers:
     preprocessor_group: "preprocessor_group"
     clusterer_group: "clusterer_group"
-
 
 dataset:
   file_path: "test/data/twitter_dataset_1000.csv"
@@ -23,6 +22,6 @@ ml:
   pca_components_num: 50
 
 denstream:
-    epsilon: 0.3
-    mu: 2
-    decaying_factor: 0.01
+  epsilon: 0.3
+  mu: 2
+  decaying_factor: 0.01

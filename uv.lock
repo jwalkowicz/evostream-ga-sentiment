@@ -190,6 +190,7 @@ dependencies = [
     { name = "redis" },
     { name = "river" },
     { name = "sentence-transformers" },
+    { name = "typer" },
 ]
 
 [package.dev-dependencies]
@@ -208,6 +209,7 @@ requires-dist = [
     { name = "redis", specifier = ">=7.4.0" },
     { name = "river", specifier = ">=0.19.0" },
     { name = "sentence-transformers", specifier = ">=5.4.1" },
+    { name = "typer", specifier = ">=0.25.0" },
 ]
 
 [package.metadata.requires-dev]

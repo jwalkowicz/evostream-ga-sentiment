@@ -1,20 +1,16 @@
-# NTH - Pretrain the model
-# Setup the model (test with test params)
-# Read from kafka
-# fit_transform
-# push the results further
 import json
 import signal
+from datetime import datetime
 
+import redis
 from confluent_kafka import KafkaError
-from river import cluster, stream
+from river import cluster, stream, metrics
 
 from src.core.config import config
-from src.infra.kafka import StreamConsumer
 from src.core.logger import logger
+from src.infra.kafka import StreamConsumer
 
 running = True
-WINDOW_SIZE = 50000
 
 class StreamClusterer:
     def __init__(self, model):
@@ -24,18 +20,23 @@ class StreamClusterer:
             topics=[config.kafka.topics.embeddings],
         )
         self.model = model
+        self.redis_client = redis.Redis(
+            host=config.redis.host, port=config.redis.port, decode_responses=True
+        )
+        self.silhouette_score = metrics.Silhouette()
 
-    def handle_shutdown(self, sig, frame):
+    def _handle_shutdown(self, sig, frame):
         """Signals the app to stop processing after the current batch."""
         global running
         logger.warning("Shutdown signal received. Finishing current batch...")
         running = False
 
     def run_clustering(self):
-        signal.signal(signal.SIGINT, self.handle_shutdown)
-        signal.signal(signal.SIGTERM, self.handle_shutdown)
+        signal.signal(signal.SIGINT, self._handle_shutdown)
+        signal.signal(signal.SIGTERM, self._handle_shutdown)
 
         logger.info("Clusterer started...")
+        current_window = 0
         try:
             while running:
                 kafka_batch = self.consumer.consume(
@@ -53,6 +54,8 @@ class StreamClusterer:
                 try:
                     for x, _ in stream.iter_array(embeddings):
                         self.model.learn_one(x)
+                        y_pred = self.model.predict_one(x)
+                        self.silhouette_score.update(x, y_pred, self.model.centers)
                     self.consumer.commit()
                     logger.info(f"Committed batch of {len(embeddings)}")
                 except Exception as e:
@@ -61,7 +64,6 @@ class StreamClusterer:
         finally:
             # FIX: Ensure clean shutdown
             self.consumer.close()
-            self.producer.close()
 
     def _prepare_batch(self, kafka_batch):
         """Parses Kafka events."""
@@ -85,6 +87,22 @@ class StreamClusterer:
             except Exception as e:
                 logger.error(f"Failed to prepare message: {e}")
         return embeddings, metadata
+
+    def _calculate_metrics(self, s):
+        metrics = {
+            "time"
+            "n_clusters": self.model.n_clusters,
+            "silhouette_coeff": self.silhouette_score
+        }
+        metrics["n_clusters"] = self.model.n_clusters
+        metrics["timestamp"] = datetime.timestamp(datetime.now())
+        return metrics
+
+    def _save_metrics(self, metrics: dict):
+        try:
+            pass
+        except Exception as e:
+            logger.error(f"Failed to write metrics history to Redis: {e}")
 
 
 if __name__ == "__main__":
