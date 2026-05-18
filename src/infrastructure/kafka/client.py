@@ -2,7 +2,7 @@ import json
 
 from confluent_kafka import Consumer, Producer
 from confluent_kafka.admin import AdminClient, KafkaError, KafkaException
-
+from confluent_kafka import NewTopic
 from src.core.logger import logger
 
 
@@ -17,8 +17,16 @@ class StreamAdmin:
             bootstrap_servers (str): Comma-separated string of Kafka brokers.
         """
         self.admin = AdminClient({"bootstrap.servers": bootstrap_servers})
+        
+    def setup_topic(self, name, num_partitions, replication_factor):
+        topic = NewTopic(
+            name=name,
+            num_partitions=num_partitions,
+            replication_factor=replication_factor
+        )
+        self.admin.create_topics([topic])
 
-    def create_initial_topics(self, topics: list):
+    def create_topics(self, topics: list):
         """
         Creates the required Kafka topics if they do not exist.
 

@@ -1,8 +1,9 @@
+import os
 import yaml
 from pydantic import BaseModel
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-
+# Kafka
 class KafkaTopic(BaseModel):
     raw_messages: str = "raw_messages"
     embeddings: str = "embeddings"
@@ -29,13 +30,13 @@ class KafkaSettings(BaseModel):
     timeout: float = 1.0
     batch_size: int = 64
 
-
+# Data
 class DatasetSettings(BaseModel):
     file_path: str
     chunk_size: int = 1000
     text_column: str = "text"
 
-
+# ML
 class MLSettings(BaseModel):
     embedding_model: str = "all-MiniLM-L6-v2"
     pca_components_num: int = 50
@@ -58,11 +59,19 @@ class Settings(BaseSettings):
     denstream: DenStreamSettings
 
     @classmethod
-    def load_from_yaml(cls, yaml_path: str = "config/test.yaml") -> "Settings":
-        """Loads and parses the configurations directly from a YAML file."""
+    def load_from_yaml(cls, yaml_path: str | None = None) -> "Settings":
+        """
+        Loads and parses the configurations directly from a YAML file.
+        If no path is provided, it looks for config/{ENV}.yaml (defaults to test.yaml).
+        """
+        if not yaml_path:
+            env = os.getenv("ENV", "test")
+            yaml_path = f"config/{env}.yaml"
+
         with open(yaml_path, "r") as f:
             raw_config = yaml.safe_load(f)
         return cls(**raw_config)
+
 
     @property
     def dataset_params(self) -> dict:
