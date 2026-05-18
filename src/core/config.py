@@ -1,9 +1,25 @@
+from __future__ import annotations
+
 import os
+
 import yaml
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+
 # Kafka
+class KafkaSettings(BaseModel):
+    topic: KafkaTopic
+    event: KafkaEventSchema
+    consumers: KafkaConsumer
+
+    bootstrap_servers: str = Field(validation_alias="KAFKA_BOOTSTRAP_SERVERS")
+    num_partitions: int = 3
+    replication_factor: int = 3
+    timeout: float = 1.0
+    batch_size: int = 64
+
+
 class KafkaTopic(BaseModel):
     raw_messages: str = "raw_messages"
     embeddings: str = "embeddings"
@@ -19,22 +35,12 @@ class KafkaConsumer(BaseModel):
     clusterer_group: str
 
 
-class KafkaSettings(BaseModel):
-    topic: KafkaTopic
-    event: KafkaEventSchema
-    consumers: KafkaConsumer
-
-    bootstrap_servers: str
-    num_partitions: int = 3
-    replication_factor: int = 3
-    timeout: float = 1.0
-    batch_size: int = 64
-
 # Data
 class DatasetSettings(BaseModel):
     file_path: str
     chunk_size: int = 1000
     text_column: str = "text"
+
 
 # ML
 class MLSettings(BaseModel):
@@ -52,26 +58,48 @@ class GeneticAlgorithmSettings(BaseModel):
     pass
 
 
-class Settings(BaseSettings):
+class PostgresSettings(BaseModel):
+    user: str = Field(validation_alias="POSTGRES_USER")
+    password: str = Field(validation_alias="POSTGRES_PASSWORD")
+    db: str = Field(validation_alias="POSTGRES_DB")
+    host: str = Field(validation_alias="POSTGRES_HOST")
+    port: int = Field(default=5432, validation_alias="POSTGRES_PORT")
+    tables: PostgresTableNames
+
+
+class PostgresTableNames(BaseModel):
+    params: str = "model_parameters"
+    results: str = "clustering_results"
+
+
+class BaseConfig(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+class Settings(BaseConfig):
     kafka: KafkaSettings
     dataset: DatasetSettings
     ml: MLSettings
     denstream: DenStreamSettings
+    postgres: PostgresSettings
 
     @classmethod
-    def load_from_yaml(cls, yaml_path: str | None = None) -> "Settings":
+    def load_from_yaml(cls) -> Settings:
         """
-        Loads and parses the configurations directly from a YAML file.
-        If no path is provided, it looks for config/{ENV}.yaml (defaults to test.yaml).
+        Loads the configurations based on the environment switch.
         """
-        if not yaml_path:
-            env = os.getenv("ENV", "test")
-            yaml_path = f"config/{env}.yaml"
+
+        class EnvSelector(BaseConfig):
+            env: str = Field(default="test", validation_alias="ENV")
+
+        active_env = EnvSelector().env
+        yaml_path = f"config/{active_env}.yaml"
+
+        if not os.path.exists(yaml_path):
+            raise FileNotFoundError(f"Config file not found: {yaml_path}")
 
         with open(yaml_path, "r") as f:
             raw_config = yaml.safe_load(f)
         return cls(**raw_config)
-
 
     @property
     def dataset_params(self) -> dict:

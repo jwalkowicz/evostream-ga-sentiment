@@ -1,5 +1,5 @@
 kafka:
-  bootstrap_servers: "kafka-broker-1:9092"
+  bootstrap_servers: "localhost:29092"
   num_partitions: 3
   replication_factor: 1
   topic:
@@ -25,3 +25,8 @@ denstream:
   epsilon: 0.3
   mu: 2
   decaying_factor: 0.01
+
+postgres:
+  tables:
+    params: "model_parameters"
+    results: "clustering_results"

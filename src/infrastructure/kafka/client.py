@@ -2,7 +2,7 @@ import json
 
 from confluent_kafka import Consumer, Producer
 from confluent_kafka.admin import AdminClient, KafkaError, KafkaException
-from confluent_kafka import NewTopic
+from confluent_kafka.admin import NewTopic
 from src.core.logger import logger
 
 
@@ -20,11 +20,11 @@ class StreamAdmin:
         
     def setup_topic(self, name, num_partitions, replication_factor):
         topic = NewTopic(
-            name=name,
+            topic=name,
             num_partitions=num_partitions,
             replication_factor=replication_factor
         )
-        self.admin.create_topics([topic])
+        self.create_topics([topic])
 
     def create_topics(self, topics: list):
         """

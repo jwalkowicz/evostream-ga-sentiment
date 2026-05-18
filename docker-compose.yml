@@ -6,15 +6,8 @@ services:
     ports:
       - "9092:9092"
       - "29092:29092"
-    environment:
-      KAFKA_NODE_ID: 1
-      KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,EXTERNAL://0.0.0.0:29092
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-broker-1:9092,EXTERNAL://localhost:29092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
-      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-broker-1:9093
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    env_file:
+      - .env
     networks:
       - evostream-net
 
@@ -23,6 +16,8 @@ services:
     container_name: kafka-ui
     ports:
       - "8080:8080"
+    env_file:
+      - .env
     environment:
       KAFKA_CLUSTERS_0_NAME: local_kraft
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka-broker-1:9092
@@ -31,27 +26,28 @@ services:
     networks:
       - evostream-net
 
-  kafka-init:
-    build: .
-    container_name: kafka-init
-    command: uv run python -m scripts.kafka_init
-    volumes: 
-      - .:/app
-      - /app/.venv
-    depends_on:
-      - kafka-broker-1
+# Postgres
+  db:
+    image: postgres:17-alpine
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    env_file:
+      - .env
     networks:
       - evostream-net
 
-# Redis
-  redis:
-    image: redis:7.4-alpine
-    container_name: redis
+  db-admin:
+    image: adminer
+    container_name: db-admin
+    restart: always
+    depends_on: 
+      - db
     ports:
-      - "6379:6379"
+      - "8000:8080"
     networks:
       - evostream-net
-    
+
 # Python services
   ingester:
     build: .
@@ -60,6 +56,10 @@ services:
     volumes:
       - .:/app
       - /app/.venv
+    env_file:
+      - .env
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka-broker-1:9092
     depends_on:
       - kafka-broker-1
     networks:
@@ -72,6 +72,10 @@ services:
     volumes:
       - .:/app
       - /app/.venv
+    env_file:
+      - .env
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka-broker-1:9092
     depends_on:
       - kafka-broker-1
     networks:
@@ -84,6 +88,10 @@ services:
     volumes:
       - .:/app
       - /app/.venv
+    env_file:
+      - .env
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka-broker-1:9092
     depends_on:
       - kafka-broker-1
     networks:
