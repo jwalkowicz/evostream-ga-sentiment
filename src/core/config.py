@@ -1,10 +1,15 @@
 from __future__ import annotations
 
 import os
+from typing import Tuple, Type
 
-import yaml
 from pydantic import BaseModel, Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import (
+    BaseSettings,
+    PydanticBaseSettingsSource,
+    SettingsConfigDict,
+    YamlConfigSettingsSource,
+)
 
 
 # Kafka
@@ -13,21 +18,21 @@ class KafkaSettings(BaseModel):
     event: KafkaEventSchema
     consumers: KafkaConsumer
 
-    bootstrap_servers: str = Field(validation_alias="KAFKA_BOOTSTRAP_SERVERS")
-    num_partitions: int = 3
-    replication_factor: int = 3
-    timeout: float = 1.0
-    batch_size: int = 64
+    bootstrap_servers: str
+    num_partitions: int
+    replication_factor: int
+    timeout: float
+    batch_size: int
 
 
 class KafkaTopic(BaseModel):
-    raw_messages: str = "raw_messages"
-    embeddings: str = "embeddings"
+    raw_messages: str
+    embeddings: str
 
 
 class KafkaEventSchema(BaseModel):
-    text_column: str = "text"
-    vector_column: str = "embedding"
+    text_column: str
+    vector_column: str
 
 
 class KafkaConsumer(BaseModel):
@@ -38,20 +43,20 @@ class KafkaConsumer(BaseModel):
 # Data
 class DatasetSettings(BaseModel):
     file_path: str
-    chunk_size: int = 1000
-    text_column: str = "text"
+    chunk_size: int
+    text_column: str
 
 
 # ML
 class MLSettings(BaseModel):
-    embedding_model: str = "all-MiniLM-L6-v2"
-    pca_components_num: int = 50
+    embedding_model: str
+    pca_components_num: int
 
 
 class DenStreamSettings(BaseModel):
-    epsilon: float = 0.3
-    mu: int = 2
-    decaying_factor: float = 0.01
+    epsilon: float
+    mu: int
+    decaying_factor: float
 
 
 class GeneticAlgorithmSettings(BaseModel):
@@ -59,47 +64,53 @@ class GeneticAlgorithmSettings(BaseModel):
 
 
 class PostgresSettings(BaseModel):
-    user: str = Field(validation_alias="POSTGRES_USER")
-    password: str = Field(validation_alias="POSTGRES_PASSWORD")
-    db: str = Field(validation_alias="POSTGRES_DB")
-    host: str = Field(validation_alias="POSTGRES_HOST")
-    port: int = Field(default=5432, validation_alias="POSTGRES_PORT")
+    user: str
+    password: str
+    db: str
+    host: str
+    port: int = 5432
     tables: PostgresTableNames
 
 
 class PostgresTableNames(BaseModel):
-    params: str = "model_parameters"
-    results: str = "clustering_results"
+    params: str
+    results: str
 
 
-class BaseConfig(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
-
-class Settings(BaseConfig):
+class Settings(BaseSettings):
     kafka: KafkaSettings
     dataset: DatasetSettings
     ml: MLSettings
     denstream: DenStreamSettings
     postgres: PostgresSettings
 
+    # Set _ as the delimiter to route variables like POSTGRES_USER to postgres.user
+    model_config = SettingsConfigDict(
+        env_file=".env", 
+        env_nested_delimiter="_",
+        extra="ignore"
+    )
+
     @classmethod
-    def load_from_yaml(cls) -> Settings:
-        """
-        Loads the configurations based on the environment switch.
-        """
-
-        class EnvSelector(BaseConfig):
-            env: str = Field(default="test", validation_alias="ENV")
-
-        active_env = EnvSelector().env
+    def settings_customise_sources(
+        cls,
+        settings_cls: Type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> Tuple[PydanticBaseSettingsSource, ...]:
+        
+        active_env = os.getenv("ENV", "test")
         yaml_path = f"config/{active_env}.yaml"
-
-        if not os.path.exists(yaml_path):
-            raise FileNotFoundError(f"Config file not found: {yaml_path}")
-
-        with open(yaml_path, "r") as f:
-            raw_config = yaml.safe_load(f)
-        return cls(**raw_config)
+        yaml_source = YamlConfigSettingsSource(settings_cls, yaml_file=yaml_path)
+        
+        return (
+            init_settings,
+            env_settings,
+            dotenv_settings,
+            yaml_source,
+        )
 
     @property
     def dataset_params(self) -> dict:
@@ -116,4 +127,4 @@ class Settings(BaseConfig):
         return self.denstream.model_dump()
 
 
-config = Settings.load_from_yaml()
+config = Settings()

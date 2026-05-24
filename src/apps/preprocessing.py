@@ -9,7 +9,7 @@ from sentence_transformers import SentenceTransformer
 from sklearn.decomposition import IncrementalPCA
 
 from src.core.config import config
-from src.infra.kafka import StreamConsumer, StreamProducer
+from src.infrastrcture.kafka import StreamConsumer, StreamProducer
 from src.core.logger import logger
 
 running = True

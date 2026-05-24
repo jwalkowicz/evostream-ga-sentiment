@@ -1,6 +1,21 @@
-from src.core.config import config
+from dataclasses import dataclass
+from typing import List
 from src.core.logger import logger
-from src.model import schemas
+
+
+@dataclass
+class TopicPrototype:
+    """Blueprint for a Kafka topic."""
+    name: str
+    num_partitions: int
+    replication_factor: int
+
+
+@dataclass
+class TablePrototype:
+    """Blueprint for a database table."""
+    name: str
+    schema_sql: str
 
 
 class InfrastructureSetup:
@@ -19,40 +34,32 @@ class InfrastructureSetup:
         self.messaging_admin = messaging_admin
         self.storage_admin = storage_admin
 
-    def setup_messaging(self):
+    def setup_messaging(self, topics: List[TopicPrototype]):
         """
-        Initializes the messaging system.
+        Initializes the messaging system by creating required topics.
         """
         logger.info("Initializing messaging channels...")
+        for topic in topics:
+            self.messaging_admin.setup_topic(
+                name=topic.name,
+                num_partitions=topic.num_partitions,
+                replication_factor=topic.replication_factor,
+            )
 
-        # Setup channel for raw incoming messages
-        self.messaging_admin.setup_topic(
-            name=config.kafka.topic.raw_messages,
-            num_partitions=config.kafka.num_partitions,
-            replication_factor=config.kafka.replication_factor,
-        )
-
-    def setup_storage(self):
+    def setup_storage(self, tables: List[TablePrototype]):
         """
-        Initializes storage components
+        Initializes storage components by creating required tables.
         """
-
         logger.info("Initializing PostgreSQL schemas...")
-        self.storage_admin.create_table(
-            name=config.postgres.tables.results,
-            schema_sql=schemas.CLUSTERING_RESULTS_SCHEMA,
-        )
+        for table in tables:
+            self.storage_admin.create_table(
+                name=table.name,
+                schema_sql=table.schema_sql,
+            )
 
-        self.storage_admin.create_table(
-            name=config.postgres.tables.params,
-            schema_sql=schemas.MODEL_PARAMETERS_SCHEMA,
-        )
-
-        pass
-
-    def run_all(self):
-        """Executes all infrastructure setup routines required for the application."""
-        logger.info("Starting global infrastructure setup...")
-        self.setup_messaging()
-        self.setup_storage()
-        logger.success("Global infrastructure setup completed.")
+    def run_all(self, topic_prototypes: List[TopicPrototype], table_prototypes: List[TablePrototype]):
+        """
+        Executes the full infrastructure setup.
+        """
+        self.setup_messaging(topic_prototypes)
+        self.setup_storage(table_prototypes)
