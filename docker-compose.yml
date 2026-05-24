@@ -52,7 +52,7 @@ services:
   ingester:
     build: .
     container_name: app-ingester
-    command: uv run python -m src.apps.ingesting
+    command: uv run python -m src.main ingest
     volumes:
       - .:/app
       - /app/.venv
@@ -65,10 +65,10 @@ services:
     networks:
       - evostream-net
 
-  preprocessor:
+  daemon:
     build: .
-    container_name: app-preprocessor
-    command: uv run python -m src.apps.preprocessing
+    container_name: app-daemon
+    command: uv run python -m src.main daemon
     volumes:
       - .:/app
       - /app/.venv
@@ -78,22 +78,7 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka-broker-1:9092
     depends_on:
       - kafka-broker-1
-    networks:
-      - evostream-net
-
-  clusterer:
-    build: .
-    container_name: app-clusterer
-    command: uv run python -m src.apps.clustering
-    volumes:
-      - .:/app
-      - /app/.venv
-    env_file:
-      - .env
-    environment:
-      KAFKA_BOOTSTRAP_SERVERS: kafka-broker-1:9092
-    depends_on:
-      - kafka-broker-1
+      - db
     networks:
       - evostream-net
 

@@ -1,10 +1,10 @@
 import signal
 import time
+import random
 from dataclasses import dataclass
-from typing import Any, Dict
+from typing import List
 
-import pandas as pd
-
+from sklearn.datasets import fetch_20newsgroups
 from src.core.logger import logger
 
 
@@ -12,46 +12,76 @@ from src.core.logger import logger
 class IngesterPrototype:
     """Blueprint for the ingester configuration."""
     topic: str
-    dataset_params: Dict[str, Any]
+    text_column: str
+    batch_size: int = 64
     batch_interval: float = 1.0
 
 
 class IngesterApp:
-    """Reads dataset chunks and produces messages to a Kafka topic."""
+    """
+    Simulates a data stream using the 20 Newsgroups dataset.
+    Implements concept drift by switching categories after a specific threshold.
+    """
 
     def __init__(self, producer, prototype: IngesterPrototype):
-        """
-        Initializes the ingester with its dependencies.
-
-        Args:
-            producer: The messaging producer client.
-            prototype: The configuration prototype for ingestion.
-        """
         self.producer = producer
         self.prototype = prototype
         self.running = True
+        self.message_count = 0
+
+    def _load_data(self, categories: List[str]):
+        """Fetches and shuffles data for specific categories."""
+        logger.info(f"Loading data for categories: {categories}")
+        data = fetch_20newsgroups(
+            subset='all', 
+            categories=categories, 
+            remove=('headers', 'footers', 'quotes')
+        )
+        # Zip data and shuffle to mix categories
+        samples = list(data.data)
+        random.shuffle(samples)
+        return samples
 
     def handle_shutdown(self, sig, frame):
-        """Signals the app to stop processing."""
         logger.warning("Shutdown signal received. Stopping ingestion...")
         self.running = False
 
     def run(self):
-        """Main execution loop for the ingester."""
         signal.signal(signal.SIGINT, self.handle_shutdown)
         signal.signal(signal.SIGTERM, self.handle_shutdown)
 
-        logger.info(f"Ingester started. Target topic: {self.prototype.topic}")
+        phase1_categories = ['sci.space', 'sci.med', 'rec.autos']
+        phase1_data = self._load_data(phase1_categories)
+        
+        phase2_categories = ['rec.sport.baseball', 'comp.sys.ibm.pc.hardware', 'talk.politics.mideast']
+        phase2_data = self._load_data(phase2_categories)
+
+        logger.info("Starting ingestion stream...")
+        drift_triggered = False
 
         try:
-            for chunk in pd.read_csv(**self.prototype.dataset_params):
-                if not self.running:
-                    break
+            while self.running:
+                if self.message_count < 5000:
+                    current_pool = phase1_data
+                else:
+                    if not drift_triggered:
+                        logger.warning("CONCEPT DRIFT")
+                        drift_triggered = True
+                    current_pool = phase2_data
 
-                for _, row in chunk.iterrows():
-                    self.producer.send(topic=self.prototype.topic, value=row.to_dict())
+                # Create a batch
+                batch = []
+                for _ in range(self.prototype.batch_size):
+                    # Cycle through data pool
+                    sample = random.choice(current_pool)
+                    batch.append({self.prototype.text_column: sample})
+                    self.message_count += 1
 
-                logger.info(f"Sent batch of {len(chunk)} messages to '{self.prototype.topic}'.")
+                # Send batch to Kafka
+                for msg in batch:
+                    self.producer.send(topic=self.prototype.topic, value=msg)
+
+                logger.info(f"Sent {len(batch)} messages. Total: {self.message_count}")
                 time.sleep(self.prototype.batch_interval)
 
         except Exception as e:

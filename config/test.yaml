@@ -11,6 +11,7 @@ kafka:
   consumers:
     preprocessor_group: "preprocessor_group"
     clusterer_group: "clusterer_group"
+    offset_reset: "earliest"
   timeout: 1.0
   batch_size: 64
 
@@ -32,4 +33,3 @@ postgres:
   tables:
     params: "model_parameters"
     results: "clustering_results"
-

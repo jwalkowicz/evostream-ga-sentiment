@@ -68,11 +68,6 @@ class StreamProducer:
         """Internal callback for delivery reports."""
         if err is not None:
             logger.error(f"Failed to deliver message: {err}")
-        else:
-            logger.debug(
-                f"Delivered to '{msg.topic()}' "
-                f"[Partition: {msg.partition()} | Offset: {msg.offset()}]"
-            )
 
     def send(self, topic: str, value: dict):
         """Serializes dict to JSON, encodes to UTF-8, and produces."""

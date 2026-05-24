@@ -14,3 +14,4 @@ MODEL_PARAMETERS_SCHEMA = """
     decay_factor FLOAT,
     fitness_score FLOAT
 """
+

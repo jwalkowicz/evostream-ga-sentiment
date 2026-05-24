@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from typing import Tuple, Type
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from pydantic_settings import (
     BaseSettings,
     PydanticBaseSettingsSource,
@@ -11,8 +11,6 @@ from pydantic_settings import (
     YamlConfigSettingsSource,
 )
 
-
-# Kafka
 class KafkaSettings(BaseModel):
     topic: KafkaTopic
     event: KafkaEventSchema
@@ -38,16 +36,13 @@ class KafkaEventSchema(BaseModel):
 class KafkaConsumer(BaseModel):
     preprocessor_group: str
     clusterer_group: str
+    offset_reset: str
 
-
-# Data
 class DatasetSettings(BaseModel):
     file_path: str
     chunk_size: int
     text_column: str
 
-
-# ML
 class MLSettings(BaseModel):
     embedding_model: str
     pca_components_num: int
@@ -84,11 +79,8 @@ class Settings(BaseSettings):
     denstream: DenStreamSettings
     postgres: PostgresSettings
 
-    # Set _ as the delimiter to route variables like POSTGRES_USER to postgres.user
     model_config = SettingsConfigDict(
-        env_file=".env", 
-        env_nested_delimiter="_",
-        extra="ignore"
+        env_file=".env", env_nested_delimiter="_", extra="ignore"
     )
 
     @classmethod
@@ -100,11 +92,11 @@ class Settings(BaseSettings):
         dotenv_settings: PydanticBaseSettingsSource,
         file_secret_settings: PydanticBaseSettingsSource,
     ) -> Tuple[PydanticBaseSettingsSource, ...]:
-        
+
         active_env = os.getenv("ENV", "test")
         yaml_path = f"config/{active_env}.yaml"
         yaml_source = YamlConfigSettingsSource(settings_cls, yaml_file=yaml_path)
-        
+
         return (
             init_settings,
             env_settings,
