@@ -70,10 +70,10 @@ class ClusteringDaemon:
 
                 if not raw_texts:
                     continue
-
-                cleaned_texts = [self.preprocessor.clean(t) for t in raw_texts]
-                embeddings = self.transformer.fit_transform(cleaned_texts)
-                self.clusterer.update(embeddings)
+                
+                
+                
+                
 
                 metrics = self.clusterer.get_metrics()
                 if self.storage:
@@ -83,9 +83,8 @@ class ClusteringDaemon:
                     )
 
                 self.consumer.commit()
-                silhouette_str = f"{metrics['silhouette']:.4f}" if metrics['silhouette'] is not None else "None"
                 logger.info(
-                    f"Processed batch of {len(embeddings)}. Clusters: {metrics['n_clusters']} | Silhouette: {silhouette_str}"
+                    "Processed batch of..."
                 )
 
         finally:
